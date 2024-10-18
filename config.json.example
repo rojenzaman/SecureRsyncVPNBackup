@@ -1,0 +1,29 @@
+{
+  "sync": {
+    "remote_servers": [
+      {
+        "host": "myserver1",
+        "user": "user1",
+        "path": "/remote/path1",
+        "ssh_private_key": "/app/ssh/id_rsa_myserver1",
+        "backup_name": "server1_backup"
+      },
+      {
+        "host": "myserver2",
+        "user": "user2",
+        "path": "/remote/path2",
+        "ssh_private_key": "/app/ssh/id_rsa_myserver2",
+        "backup_name": "server2_backup"
+      }
+    ]
+  },
+  "settings": {
+    "sync_target": "/data/sync",
+    "ssh_port": 22,
+    "max_days": 7,
+    "debug_mode": true,
+    "ssh_connection_timeout": 10,
+    "rsync_max_retries": 3,
+    "backup_name_format": "date_time"
+  }
+}

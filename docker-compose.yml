@@ -1,0 +1,25 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun-vpn
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=mullvad  # Replace with your VPN provider
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY="your_private_key"
+      - WIREGUARD_ADDRESSES="X.X.X.X/32"
+      - SERVER_CITIES=CityName  # Replace with desired server location
+    restart: always
+
+  ssh-client:
+    build: .
+    container_name: ssh-client-container
+    volumes:
+      - ./ssh:/app/ssh:ro  # Use local SSH keys and config
+      - ./data:/data/sync  # Directory for synced data
+      - ./crontab:/etc/crontabs/root:ro  # Crontab file for scheduling
+      - ./config.json:/app/config/config.json:ro  # Mount the JSON config file
+    network_mode: "service:gluetun"  # Route traffic through the Gluetun VPN
+    stdin_open: true
+    tty: true
