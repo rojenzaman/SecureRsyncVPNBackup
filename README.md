@@ -6,6 +6,7 @@ A Docker-based solution for performing secure `rsync` backups over a VPN network
 
 - **Secure Backups over VPN**: All `rsync` operations are performed over a VPN connection provided by Gluetun.
 - **Multiple Server Support**: Backup multiple remote servers, each with its own SSH key and configuration.
+- **Multiple Paths per Server**: Define multiple files or directories to back up from each remote server.
 - **Customizable Backup Directory Structure**: Define custom names for backup directories and choose between date, date-time, or static formats.
 - **Automated Scheduling**: Use `crontab` to schedule backups at your desired intervals.
 - **Configurable Retention Policy**: Automatically delete backups older than a specified number of days.
@@ -48,7 +49,7 @@ This file contains all the settings for your backups. Below is an explanation of
       {
         "host": "yourserver.com",
         "user": "username",
-        "path": "/remote/directory",
+        "paths": ["/remote/directory1", "/remote/file.txt"],
         "ssh_private_key": "/app/ssh/id_rsa_yourserver",
         "backup_name": "custom_backup_name",
         "backup_name_format": "date_time" // Possible values: "date_time", "date", "static"
@@ -69,7 +70,7 @@ This file contains all the settings for your backups. Below is an explanation of
 - **`remote_servers`**: An array of servers to back up.
   - **`host`**: The hostname or IP address of the remote server.
   - **`user`**: The SSH username for the remote server.
-  - **`path`**: The directory on the remote server to back up.
+  - **`paths`**: An array of files or directories on the remote server to back up.
   - **`ssh_private_key`**: Path to the SSH private key inside the Docker container.
   - **`backup_name`**: Custom name for the backup directory (defaults to `host` if not specified).
   - **`backup_name_format`**: Format for backup directory names. Possible values:
@@ -172,6 +173,23 @@ Modify the `crontab` file to change how often backups occur.
 
 Add additional server configurations to the `remote_servers` array in `config.json`.
 
+### Add Multiple Paths per Server
+
+You can now specify multiple files or directories to back up from each remote server using the `paths` parameter.
+
+**Example:**
+
+```json
+{
+  "host": "yourserver.com",
+  "user": "username",
+  "paths": ["/remote/directory1", "/remote/file.txt", "/remote/directory2"],
+  "ssh_private_key": "/app/ssh/id_rsa_yourserver",
+  "backup_name": "custom_backup_name",
+  "backup_name_format": "date_time"
+}
+```
+
 ### Customize Gluetun Settings
 
 Modify the `docker-compose.yml` file to change VPN providers or settings.
@@ -196,14 +214,14 @@ Possible values:
 {
   "host": "yourserver.com",
   "user": "username",
-  "path": "/remote/directory",
+  "paths": ["/remote/directory"],
   "ssh_private_key": "/app/ssh/id_rsa_yourserver",
   "backup_name": "custom_backup_name",
   "backup_name_format": "static"
 }
 ```
 
-**Note**: When using `"static"` mode, the local backup directory will be fully synchronized with the remote directory, and files deleted on the remote server will also be deleted locally. This is useful when backup rotation is already handled on the remote server.
+**Note**: When using `"static"` mode, the local backup directory will be fully synchronized with the remote directories and files, and files deleted on the remote server will also be deleted locally. This is useful when backup rotation is already handled on the remote server.
 
 ## Usage Scenarios
 
@@ -213,11 +231,15 @@ Possible values:
 
 - **Synchronize with Remote Backup Rotation**
 
-  If your remote server already handles backup rotation and you want to keep your local backup directory fully synchronized with it, you can use the `"static"` `backup_name_format`. This mode ensures that your local backup mirrors the remote directory exactly.
+  If your remote server already handles backup rotation and you want to keep your local backup directory fully synchronized with it, you can use the `"static"` `backup_name_format`. This mode ensures that your local backup mirrors the remote directories exactly.
 
 - **Multi-Server Backup Management**
 
   Easily back up multiple servers with different configurations and SSH keys.
+
+- **Backup Multiple Paths from a Single Server**
+
+  Back up multiple directories and files from the same server by specifying them in the `paths` array.
 
 - **Automated Backup Solution**
 

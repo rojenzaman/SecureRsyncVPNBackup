@@ -5,7 +5,6 @@ import logging
 import shutil
 import time
 from datetime import datetime, timedelta
-import stat
 
 # Set up logging
 logging.basicConfig(
@@ -73,40 +72,46 @@ def check_and_fix_ssh_key_permissions(ssh_private_key):
 def run_rsync_with_retries(server, backup_directory, backup_name_format):
     remote_user = server['user']
     remote_host = server['host']
-    remote_path = server['path']
     ssh_private_key = server['ssh_private_key']
+    paths = server.get('paths', [])
 
     # Check and fix SSH key permissions
     check_and_fix_ssh_key_permissions(ssh_private_key)
 
-    rsync_command = [
-        'rsync', '-avz',
-        '--timeout=30',  # Rsync timeout in seconds
-        '-e', f'ssh -p {ssh_port} -i {ssh_private_key} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout={ssh_connection_timeout}',
-        f'{remote_user}@{remote_host}:{remote_path}',
-        backup_directory
-    ]
+    # Ensure at least one path is specified
+    if not paths:
+        logging.error(f"No paths specified for server {remote_host}. Skipping.")
+        return
 
-    if backup_name_format == 'static':
-        rsync_command.insert(1, '--delete')  # Insert '--delete' option after 'rsync'
+    for remote_path in paths:
+        rsync_command = [
+            'rsync', '-avz',
+            '--timeout=30',  # Rsync timeout in seconds
+            '-e', f'ssh -p {ssh_port} -i {ssh_private_key} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout={ssh_connection_timeout}',
+            f'{remote_user}@{remote_host}:{remote_path}',
+            backup_directory
+        ]
 
-    attempt = 1
-    while attempt <= rsync_max_retries:
-        logging.info(f"Attempt {attempt}/{rsync_max_retries}: Starting rsync from {remote_host}:{remote_path} to {backup_directory}")
-        try:
-            result = subprocess.run(rsync_command, check=True, capture_output=True, text=True)
-            logging.info(f"Rsync completed successfully on attempt {attempt}:\n{result.stdout}")
-            return  # Exit the function if rsync is successful
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Rsync failed on attempt {attempt} with error:\n{e.stderr}")
-            if attempt == rsync_max_retries:
-                logging.error(f"Maximum retries reached for {remote_host}. Moving on to the next server.")
-                if not debug_mode:
-                    break
-            else:
-                logging.info(f"Retrying rsync for {remote_host} after a short delay...")
-                time.sleep(5)  # Wait 5 seconds before retrying
-        attempt += 1
+        if backup_name_format == 'static':
+            rsync_command.insert(1, '--delete')  # Insert '--delete' option after 'rsync'
+
+        attempt = 1
+        while attempt <= rsync_max_retries:
+            logging.info(f"Attempt {attempt}/{rsync_max_retries}: Starting rsync from {remote_host}:{remote_path} to {backup_directory}")
+            try:
+                result = subprocess.run(rsync_command, check=True, capture_output=True, text=True)
+                logging.info(f"Rsync completed successfully on attempt {attempt}:\n{result.stdout}")
+                break  # Exit the retry loop if rsync is successful
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Rsync failed on attempt {attempt} with error:\n{e.stderr}")
+                if attempt == rsync_max_retries:
+                    logging.error(f"Maximum retries reached for {remote_host}. Moving on to the next path.")
+                    if not debug_mode:
+                        break
+                else:
+                    logging.info(f"Retrying rsync for {remote_host} after a short delay...")
+                    time.sleep(5)  # Wait 5 seconds before retrying
+            attempt += 1
 
 # Function to remove backups older than max_days
 def clean_old_backups():

@@ -4,7 +4,7 @@
       {
         "host": "myserver1",
         "user": "user1",
-        "path": "/remote/path1",
+        "paths": ["/remote/path1", "/remote/path2"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver1",
         "backup_name": "server1_backup",
         "backup_name_format": "date_time"  // Possible values: "date_time", "date", "static"
@@ -12,7 +12,7 @@
       {
         "host": "myserver2",
         "user": "user2",
-        "path": "/remote/path2",
+        "paths": ["/remote/path3"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver2",
         "backup_name": "server2_backup",
         "backup_name_format": "date"  // Possible values: "date_time", "date", "static"
@@ -20,7 +20,7 @@
       {
         "host": "myserver3",
         "user": "user3",
-        "path": "/remote/path3",
+        "paths": ["/remote/path4", "/remote/path5"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver3",
         "backup_name": "server3_sync",
         "backup_name_format": "static"  // Possible values: "date_time", "date", "static"
