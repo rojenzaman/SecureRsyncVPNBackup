@@ -30,35 +30,48 @@ max_days = config['settings']['max_days']
 debug_mode = config['settings'].get('debug_mode', False)
 ssh_connection_timeout = config['settings'].get('ssh_connection_timeout', 10)
 rsync_max_retries = config['settings'].get('rsync_max_retries', 3)
-backup_name_format = config['settings'].get('backup_name_format', 'date_time')  # Default to 'date_time'
 
 # Function to create a server-specific subdirectory
 def get_backup_directory(server):
     backup_name = server.get('backup_name', server['host'])
+    backup_name_format = server.get('backup_name_format', 'date_time')  # Default to 'date_time' if not specified
+    server_directory = os.path.join(sync_target_base, backup_name)
+
     if backup_name_format == 'date_time':
         current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        backup_directory = os.path.join(server_directory, current_time)
     elif backup_name_format == 'date':
         current_time = datetime.now().strftime('%Y-%m-%d')
+        backup_directory = os.path.join(server_directory, current_time)
+    elif backup_name_format == 'static':
+        backup_directory = server_directory
     else:
         logging.error(f"Invalid backup_name_format: {backup_name_format}. Using 'date_time' as default.")
         current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        backup_directory = os.path.join(server_directory, current_time)
 
-    server_directory = os.path.join(sync_target_base, backup_name)
-    backup_directory = os.path.join(server_directory, current_time)
-    
     # Create the backup directory if it doesn't exist
     os.makedirs(backup_directory, exist_ok=True)
-    
-    return backup_directory
+
+    return backup_directory, backup_name_format
 
 # Function to execute rsync command with retries
-def run_rsync_with_retries(remote_user, remote_host, remote_path, ssh_private_key, backup_directory):
+def run_rsync_with_retries(server, backup_directory, backup_name_format):
+    remote_user = server['user']
+    remote_host = server['host']
+    remote_path = server['path']
+    ssh_private_key = server['ssh_private_key']
+
     rsync_command = [
         'rsync', '-avz',
         '--timeout=30',  # Rsync timeout in seconds
         '-e', f'ssh -p {ssh_port} -i {ssh_private_key} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout={ssh_connection_timeout}',
-        f'{remote_user}@{remote_host}:{remote_path}', backup_directory
+        f'{remote_user}@{remote_host}:{remote_path}',
+        backup_directory
     ]
+
+    if backup_name_format == 'static':
+        rsync_command.insert(1, '--delete')  # Insert '--delete' option after 'rsync'
 
     attempt = 1
     while attempt <= rsync_max_retries:
@@ -85,6 +98,17 @@ def clean_old_backups():
     for server_dir in os.listdir(sync_target_base):
         server_dir_path = os.path.join(sync_target_base, server_dir)
         if os.path.isdir(server_dir_path):
+            # Get backup_name_format for this server from the config
+            server = next((s for s in remote_servers if s.get('backup_name', s['host']) == server_dir), None)
+            if server:
+                backup_name_format = server.get('backup_name_format', 'date_time')
+            else:
+                backup_name_format = 'date_time'  # Default
+
+            # Skip cleaning for 'static' backup_name_format
+            if backup_name_format == 'static':
+                continue
+
             for backup_dir in os.listdir(server_dir_path):
                 backup_dir_path = os.path.join(server_dir_path, backup_dir)
                 if os.path.isdir(backup_dir_path):
@@ -102,18 +126,14 @@ def clean_old_backups():
                             shutil.rmtree(backup_dir_path)
                     else:
                         logging.warning(f"Skipping directory {backup_dir_path} — unable to parse date")
+        else:
+            logging.warning(f"Skipping non-directory {server_dir_path}")
 
 # Run rsync for each remote server
 for server in remote_servers:
     try:
-        backup_directory = get_backup_directory(server)
-        run_rsync_with_retries(
-            server['user'],
-            server['host'],
-            server['path'],
-            server['ssh_private_key'],
-            backup_directory
-        )
+        backup_directory, backup_name_format = get_backup_directory(server)
+        run_rsync_with_retries(server, backup_directory, backup_name_format)
     except Exception as e:
         logging.error(f"Error occurred during backup of {server['host']}: {e}")
         if debug_mode:

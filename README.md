@@ -6,7 +6,7 @@ A Docker-based solution for performing secure `rsync` backups over a VPN network
 
 - **Secure Backups over VPN**: All `rsync` operations are performed over a VPN connection provided by Gluetun.
 - **Multiple Server Support**: Backup multiple remote servers, each with its own SSH key and configuration.
-- **Customizable Backup Directory Structure**: Define custom names for backup directories and choose between date or date-time formats.
+- **Customizable Backup Directory Structure**: Define custom names for backup directories and choose between date, date-time, or static formats.
 - **Automated Scheduling**: Use `crontab` to schedule backups at your desired intervals.
 - **Configurable Retention Policy**: Automatically delete backups older than a specified number of days.
 - **Flexible Configuration**: All settings are managed via `config.json`, allowing easy customization without modifying code.
@@ -50,7 +50,8 @@ This file contains all the settings for your backups. Below is an explanation of
         "user": "username",
         "path": "/remote/directory",
         "ssh_private_key": "/app/ssh/id_rsa_yourserver",
-        "backup_name": "custom_backup_name"
+        "backup_name": "custom_backup_name",
+        "backup_name_format": "date_time" // Possible values: "date_time", "date", "static"
       }
     ]
   },
@@ -60,8 +61,7 @@ This file contains all the settings for your backups. Below is an explanation of
     "max_days": 7,
     "debug_mode": false,
     "ssh_connection_timeout": 10,
-    "rsync_max_retries": 3,
-    "backup_name_format": "date_time"
+    "rsync_max_retries": 3
   }
 }
 ```
@@ -72,6 +72,10 @@ This file contains all the settings for your backups. Below is an explanation of
   - **`path`**: The directory on the remote server to back up.
   - **`ssh_private_key`**: Path to the SSH private key inside the Docker container.
   - **`backup_name`**: Custom name for the backup directory (defaults to `host` if not specified).
+  - **`backup_name_format`**: Format for backup directory names. Possible values:
+    - `"date_time"`: Creates a new backup directory with the current date and time (e.g., `2024-10-19_12-00-00`).
+    - `"date"`: Creates a new backup directory with the current date (e.g., `2024-10-19`).
+    - `"static"`: Synchronizes to a single directory without creating date-based subdirectories. In this mode, the backup directory specified by `backup_name` will be fully synchronized with the remote server, including deletions.
 - **`settings`**:
   - **`sync_target`**: The local directory where backups will be stored.
   - **`ssh_port`**: SSH port of the remote servers.
@@ -79,7 +83,6 @@ This file contains all the settings for your backups. Below is an explanation of
   - **`debug_mode`**: Set to `true` to keep the container running after errors for debugging.
   - **`ssh_connection_timeout`**: SSH connection timeout in seconds.
   - **`rsync_max_retries`**: Number of times to retry `rsync` on failure.
-  - **`backup_name_format`**: Format for backup directory names (`"date_time"` or `"date"`).
 
 **Note**: After editing, make sure your `config.json` is valid JSON. Comments are not allowed in JSON files.
 
@@ -161,27 +164,56 @@ services:
 
 ## Customization
 
-- **Adjust Backup Frequency**
+### Adjust Backup Frequency
 
-  Modify the `crontab` file to change how often backups occur.
+Modify the `crontab` file to change how often backups occur.
 
-- **Add More Servers**
+### Add More Servers
 
-  Add additional server configurations to the `remote_servers` array in `config.json`.
+Add additional server configurations to the `remote_servers` array in `config.json`.
 
-- **Customize Gluetun Settings**
+### Customize Gluetun Settings
 
-  Modify the `docker-compose.yml` file to change VPN providers or settings.
+Modify the `docker-compose.yml` file to change VPN providers or settings.
 
-- **Change Backup Retention**
+### Change Backup Retention
 
-  Update the `max_days` setting in `config.json` to keep backups for a longer or shorter period.
+Update the `max_days` setting in `config.json` to keep backups for a longer or shorter period.
+
+## Backup Directory Formats
+
+You can specify the format for backup directory names using the `backup_name_format` parameter. This can be set per server in the `config.json` file under each server's configuration.
+
+Possible values:
+
+- **`"date_time"`**: Creates a new backup directory with the current date and time (e.g., `2024-10-19_12-00-00`).
+- **`"date"`**: Creates a new backup directory with the current date (e.g., `2024-10-19`).
+- **`"static"`**: Synchronizes to a single directory without creating date-based subdirectories. In this mode, the backup directory specified by `backup_name` will be fully synchronized with the remote server, including deletions.
+
+**Example:**
+
+```json
+{
+  "host": "yourserver.com",
+  "user": "username",
+  "path": "/remote/directory",
+  "ssh_private_key": "/app/ssh/id_rsa_yourserver",
+  "backup_name": "custom_backup_name",
+  "backup_name_format": "static"
+}
+```
+
+**Note**: When using `"static"` mode, the local backup directory will be fully synchronized with the remote directory, and files deleted on the remote server will also be deleted locally. This is useful when backup rotation is already handled on the remote server.
 
 ## Usage Scenarios
 
 - **Secure Offsite Backups**
 
   Keep secure backups of your remote servers over a VPN to protect sensitive data during transit.
+
+- **Synchronize with Remote Backup Rotation**
+
+  If your remote server already handles backup rotation and you want to keep your local backup directory fully synchronized with it, you can use the `"static"` `backup_name_format`. This mode ensures that your local backup mirrors the remote directory exactly.
 
 - **Multi-Server Backup Management**
 
