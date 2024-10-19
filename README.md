@@ -7,6 +7,7 @@ A Docker-based solution for performing secure `rsync` backups over a VPN network
 - **Secure Backups over VPN**: All `rsync` operations are performed over a VPN connection provided by Gluetun.
 - **Multiple Server Support**: Backup multiple remote servers, each with its own SSH key and configuration.
 - **Multiple Paths per Server**: Define multiple files or directories to back up from each remote server.
+- **Preserve Directory Hierarchy**: Optionally preserve the full directory hierarchy when backing up, starting from the root directory.
 - **Customizable Backup Directory Structure**: Define custom names for backup directories and choose between date, date-time, or static formats.
 - **Automated Scheduling**: Use `crontab` to schedule backups at your desired intervals.
 - **Configurable Retention Policy**: Automatically delete backups older than a specified number of days.
@@ -52,7 +53,8 @@ This file contains all the settings for your backups. Below is an explanation of
         "paths": ["/remote/directory1", "/remote/file.txt"],
         "ssh_private_key": "/app/ssh/id_rsa_yourserver",
         "backup_name": "custom_backup_name",
-        "backup_name_format": "date_time" // Possible values: "date_time", "date", "static"
+        "backup_name_format": "date_time", // Possible values: "date_time", "date", "static"
+        "preserve_paths": true  // Set to true to preserve directory hierarchy
       }
     ]
   },
@@ -77,6 +79,7 @@ This file contains all the settings for your backups. Below is an explanation of
     - `"date_time"`: Creates a new backup directory with the current date and time (e.g., `2024-10-19_12-00-00`).
     - `"date"`: Creates a new backup directory with the current date (e.g., `2024-10-19`).
     - `"static"`: Synchronizes to a single directory without creating date-based subdirectories. In this mode, the backup directory specified by `backup_name` will be fully synchronized with the remote server, including deletions.
+  - **`preserve_paths`**: Set to `true` to preserve the full directory hierarchy starting from the root directory (`/`). When enabled, the directory structure of the backed-up files will be maintained in the local backup.
 - **`settings`**:
   - **`sync_target`**: The local directory where backups will be stored.
   - **`ssh_port`**: SSH port of the remote servers.
@@ -86,6 +89,28 @@ This file contains all the settings for your backups. Below is an explanation of
   - **`rsync_max_retries`**: Number of times to retry `rsync` on failure.
 
 **Note**: After editing, make sure your `config.json` is valid JSON. Comments are not allowed in JSON files.
+
+#### Example with `preserve_paths`
+
+```json
+{
+  "host": "X.X.X.X",
+  "user": "root",
+  "paths": ["/opt/backup", "/root", "/etc/systemd"],
+  "ssh_private_key": "/app/ssh/key1",
+  "backup_name": "backup1",
+  "backup_name_format": "static",
+  "preserve_paths": true
+}
+```
+
+With `preserve_paths` set to `true`, the backup will maintain the directory structure:
+
+```
+/data/sync/backup1/opt/backup
+/data/sync/backup1/root
+/data/sync/backup1/etc/systemd
+```
 
 ### 2. `crontab`
 
@@ -175,7 +200,7 @@ Add additional server configurations to the `remote_servers` array in `config.js
 
 ### Add Multiple Paths per Server
 
-You can now specify multiple files or directories to back up from each remote server using the `paths` parameter.
+You can specify multiple files or directories to back up from each remote server using the `paths` parameter.
 
 **Example:**
 
@@ -186,7 +211,26 @@ You can now specify multiple files or directories to back up from each remote se
   "paths": ["/remote/directory1", "/remote/file.txt", "/remote/directory2"],
   "ssh_private_key": "/app/ssh/id_rsa_yourserver",
   "backup_name": "custom_backup_name",
-  "backup_name_format": "date_time"
+  "backup_name_format": "date_time",
+  "preserve_paths": true
+}
+```
+
+### Preserve Directory Hierarchy
+
+To maintain the full directory structure of the backed-up files starting from the root directory (`/`), set `preserve_paths` to `true` in your server configuration.
+
+**Example:**
+
+```json
+{
+  "host": "X.X.X.X",
+  "user": "root",
+  "paths": ["/opt/backup", "/root", "/etc/systemd"],
+  "ssh_private_key": "/app/ssh/key1",
+  "backup_name": "backup1",
+  "backup_name_format": "static",
+  "preserve_paths": true
 }
 ```
 
@@ -208,20 +252,7 @@ Possible values:
 - **`"date"`**: Creates a new backup directory with the current date (e.g., `2024-10-19`).
 - **`"static"`**: Synchronizes to a single directory without creating date-based subdirectories. In this mode, the backup directory specified by `backup_name` will be fully synchronized with the remote server, including deletions.
 
-**Example:**
-
-```json
-{
-  "host": "yourserver.com",
-  "user": "username",
-  "paths": ["/remote/directory"],
-  "ssh_private_key": "/app/ssh/id_rsa_yourserver",
-  "backup_name": "custom_backup_name",
-  "backup_name_format": "static"
-}
-```
-
-**Note**: When using `"static"` mode, the local backup directory will be fully synchronized with the remote directories and files, and files deleted on the remote server will also be deleted locally. This is useful when backup rotation is already handled on the remote server.
+**Note**: When using `"static"` mode with `preserve_paths` enabled, the local backup directory will maintain the directory hierarchy of the specified paths.
 
 ## Usage Scenarios
 
@@ -229,13 +260,9 @@ Possible values:
 
   Keep secure backups of your remote servers over a VPN to protect sensitive data during transit.
 
-- **Synchronize with Remote Backup Rotation**
+- **Preserve Directory Structure**
 
-  If your remote server already handles backup rotation and you want to keep your local backup directory fully synchronized with it, you can use the `"static"` `backup_name_format`. This mode ensures that your local backup mirrors the remote directories exactly.
-
-- **Multi-Server Backup Management**
-
-  Easily back up multiple servers with different configurations and SSH keys.
+  Use `preserve_paths` to maintain the full directory hierarchy of your backups, making it easier to restore files to their original locations.
 
 - **Backup Multiple Paths from a Single Server**
 

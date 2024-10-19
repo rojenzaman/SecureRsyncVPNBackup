@@ -74,6 +74,7 @@ def run_rsync_with_retries(server, backup_directory, backup_name_format):
     remote_host = server['host']
     ssh_private_key = server['ssh_private_key']
     paths = server.get('paths', [])
+    preserve_paths = server.get('preserve_paths', False)
 
     # Check and fix SSH key permissions
     check_and_fix_ssh_key_permissions(ssh_private_key)
@@ -88,12 +89,18 @@ def run_rsync_with_retries(server, backup_directory, backup_name_format):
             'rsync', '-avz',
             '--timeout=30',  # Rsync timeout in seconds
             '-e', f'ssh -p {ssh_port} -i {ssh_private_key} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout={ssh_connection_timeout}',
-            f'{remote_user}@{remote_host}:{remote_path}',
-            backup_directory
         ]
 
         if backup_name_format == 'static':
             rsync_command.insert(1, '--delete')  # Insert '--delete' option after 'rsync'
+
+        if preserve_paths:
+            rsync_command.insert(1, '-R')  # Insert '--relative' option after 'rsync'
+
+        rsync_command.extend([
+            f'{remote_user}@{remote_host}:{remote_path}',
+            backup_directory
+        ])
 
         attempt = 1
         while attempt <= rsync_max_retries:
