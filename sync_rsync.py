@@ -5,6 +5,7 @@ import logging
 import shutil
 import time
 from datetime import datetime, timedelta
+import stat
 
 # Set up logging
 logging.basicConfig(
@@ -55,12 +56,28 @@ def get_backup_directory(server):
 
     return backup_directory, backup_name_format
 
+# Function to check and fix SSH key file permissions
+def check_and_fix_ssh_key_permissions(ssh_private_key):
+    try:
+        key_file_stat = os.stat(ssh_private_key)
+        # Check if permissions are 600
+        if oct(key_file_stat.st_mode & 0o777) != '0o600':
+            logging.info(f"Setting permissions of {ssh_private_key} to 600")
+            os.chmod(ssh_private_key, 0o600)
+    except Exception as e:
+        logging.error(f"Error checking or setting permissions for {ssh_private_key}: {e}")
+        if not debug_mode:
+            raise
+
 # Function to execute rsync command with retries
 def run_rsync_with_retries(server, backup_directory, backup_name_format):
     remote_user = server['user']
     remote_host = server['host']
     remote_path = server['path']
     ssh_private_key = server['ssh_private_key']
+
+    # Check and fix SSH key permissions
+    check_and_fix_ssh_key_permissions(ssh_private_key)
 
     rsync_command = [
         'rsync', '-avz',
