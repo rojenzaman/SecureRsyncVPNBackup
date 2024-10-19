@@ -5,7 +5,7 @@ FROM alpine:latest
 RUN apk add --no-cache python3 py3-pip rsync openssh-client bash
 
 # Install Python packages
-RUN pip3 install apscheduler
+RUN pip3 install apscheduler --break-system-packages
 
 # Create directories for ssh keys, config, and synced data
 RUN mkdir -p /app/ssh /data/sync /app/config && chmod 700 /app/ssh
