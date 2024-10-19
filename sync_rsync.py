@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timedelta
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from pytz import timezone
 
 # Set up logging
 logging.basicConfig(
@@ -168,7 +169,7 @@ def clean_old_backups(server):
         logging.warning(f"Server backup directory does not exist: {server_directory}")
 
 # Scheduler setup
-scheduler = BlockingScheduler()
+scheduler = BlockingScheduler(timezone=os.environ.get('TZ', 'UTC'))
 
 for server in remote_servers:
     schedule = server.get('schedule', {})

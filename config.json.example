@@ -10,7 +10,8 @@
         "backup_name_format": "date_time",  // Possible values: "date_time", "date", "static"
         "preserve_paths": false,  // Set to true to preserve directory hierarchy
         "schedule": {
-          "interval_hours": 24  // Backup every 24 hours
+          "interval_hours": 0,
+          "interval_minutes": 30  // Backup every 30 minutes
         }
       },
       {
@@ -22,7 +23,8 @@
         "backup_name_format": "date",
         "preserve_paths": false,
         "schedule": {
-          "interval_hours": 12  // Backup every 12 hours
+          "interval_hours": 1,
+          "interval_minutes": 0  // Backup every 1 hour
         }
       },
       {
@@ -34,7 +36,8 @@
         "backup_name_format": "static",
         "preserve_paths": true,
         "schedule": {
-          "interval_hours": 6  // Backup every 6 hours
+          "interval_hours": 0,
+          "interval_minutes": 15  // Backup every 15 minutes
         }
       },
       {
@@ -46,7 +49,8 @@
         "backup_name_format": "static",
         "preserve_paths": true,
         "schedule": {
-          "interval_hours": 24  // Backup every 24 hours
+          "interval_hours": 2,
+          "interval_minutes": 30  // Backup every 2 hours and 30 minutes
         }
       }
     ]

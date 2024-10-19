@@ -6,9 +6,9 @@ A Docker-based solution for performing secure `rsync` backups over a VPN network
 
 - **Secure Backups over VPN**: All `rsync` operations are performed over a VPN connection provided by Gluetun.
 - **Multiple Server Support**: Backup multiple remote servers, each with its own SSH key and configuration.
-- **Per-Server Scheduling**: Configure individual backup intervals for each server directly in `config.json`.
+- **Per-Server Scheduling**: Configure individual backup intervals for each server directly in `config.json` using hours and minutes.
 - **Multiple Paths per Server**: Define multiple files or directories to back up from each remote server.
-- **Preserve Directory Hierarchy**: Optionally preserve the full directory hierarchy when backing up, starting from the root directory.
+- **Preserve Directory Hierarchy**: Optionally preserve the full directory hierarchy when backing up.
 - **Customizable Backup Directory Structure**: Define custom names for backup directories and choose between date, date-time, or static formats.
 - **Automated Retention Policy**: Automatically delete backups older than a specified number of days.
 - **Flexible Configuration**: All settings are managed via `config.json`, allowing easy customization without modifying code.
@@ -17,7 +17,7 @@ A Docker-based solution for performing secure `rsync` backups over a VPN network
 
 ### `config.json`
 
-This file contains all the settings for your backups. Below is an explanation of each section:
+This file contains all the settings for your backups.
 
 - **`remote_servers`**: An array of servers to back up.
   - **`host`**: The hostname or IP address of the remote server.
@@ -43,7 +43,8 @@ This file contains all the settings for your backups. Below is an explanation of
   "backup_name_format": "static",
   "preserve_paths": true,
   "schedule": {
-    "interval_hours": 24
+    "interval_hours": 2,
+    "interval_minutes": 30  // Backup every 2 hours and 30 minutes
   }
 }
 ```
@@ -67,6 +68,12 @@ This file contains all the settings for your backups. Below is an explanation of
 3. **Access the Backup Data**
 
    Your backups will be stored in the `data/sync` directory, organized per your configuration.
+
+---
+
+**Note**: The backups can now be scheduled with intervals specified in both hours and minutes, providing more precise control over backup timing.
+
+---
 
 ## License
 
