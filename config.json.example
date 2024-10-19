@@ -8,7 +8,10 @@
         "ssh_private_key": "/app/ssh/id_rsa_myserver1",
         "backup_name": "server1_backup",
         "backup_name_format": "date_time",  // Possible values: "date_time", "date", "static"
-        "preserve_paths": false  // Set to true to preserve directory hierarchy
+        "preserve_paths": false,  // Set to true to preserve directory hierarchy
+        "schedule": {
+          "interval_hours": 24  // Backup every 24 hours
+        }
       },
       {
         "host": "myserver2",
@@ -17,7 +20,10 @@
         "ssh_private_key": "/app/ssh/id_rsa_myserver2",
         "backup_name": "server2_backup",
         "backup_name_format": "date",
-        "preserve_paths": false
+        "preserve_paths": false,
+        "schedule": {
+          "interval_hours": 12  // Backup every 12 hours
+        }
       },
       {
         "host": "myserver3",
@@ -26,7 +32,10 @@
         "ssh_private_key": "/app/ssh/id_rsa_myserver3",
         "backup_name": "server3_sync",
         "backup_name_format": "static",
-        "preserve_paths": true
+        "preserve_paths": true,
+        "schedule": {
+          "interval_hours": 6  // Backup every 6 hours
+        }
       },
       {
         "host": "X.X.X.X",
@@ -35,7 +44,10 @@
         "ssh_private_key": "/app/ssh/key1",
         "backup_name": "backup1",
         "backup_name_format": "static",
-        "preserve_paths": true  // Preserve directory hierarchy
+        "preserve_paths": true,
+        "schedule": {
+          "interval_hours": 24  // Backup every 24 hours
+        }
       }
     ]
   },

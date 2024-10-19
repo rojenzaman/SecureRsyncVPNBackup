@@ -18,7 +18,6 @@ services:
     volumes:
       - ./ssh:/app/ssh:ro  # Use local SSH keys and config
       - ./data:/data/sync  # Directory for synced data
-      - ./crontab:/etc/crontabs/root:ro  # Crontab file for scheduling
       - ./config.json:/app/config/config.json:ro  # Mount the JSON config file
     network_mode: "service:gluetun"  # Route traffic through the Gluetun VPN
     stdin_open: true

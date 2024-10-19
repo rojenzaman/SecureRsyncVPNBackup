@@ -5,6 +5,8 @@ import logging
 import shutil
 import time
 from datetime import datetime, timedelta
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 # Set up logging
 logging.basicConfig(
@@ -69,12 +71,14 @@ def check_and_fix_ssh_key_permissions(ssh_private_key):
             raise
 
 # Function to execute rsync command with retries
-def run_rsync_with_retries(server, backup_directory, backup_name_format):
+def run_rsync_with_retries(server):
     remote_user = server['user']
     remote_host = server['host']
     ssh_private_key = server['ssh_private_key']
     paths = server.get('paths', [])
     preserve_paths = server.get('preserve_paths', False)
+
+    backup_directory, backup_name_format = get_backup_directory(server)
 
     # Check and fix SSH key permissions
     check_and_fix_ssh_key_permissions(ssh_private_key)
@@ -95,7 +99,7 @@ def run_rsync_with_retries(server, backup_directory, backup_name_format):
             rsync_command.insert(1, '--delete')  # Insert '--delete' option after 'rsync'
 
         if preserve_paths:
-            rsync_command.insert(1, '-R')  # Insert '--relative' option after 'rsync'
+            rsync_command.insert(1, '-R')  # Insert '-R' (relative) option after 'rsync'
 
         rsync_command.extend([
             f'{remote_user}@{remote_host}:{remote_path}',
@@ -120,66 +124,75 @@ def run_rsync_with_retries(server, backup_directory, backup_name_format):
                     time.sleep(5)  # Wait 5 seconds before retrying
             attempt += 1
 
-# Function to remove backups older than max_days
-def clean_old_backups():
-    cutoff_date = datetime.now() - timedelta(days=max_days)
-    date_formats = ['%Y-%m-%d_%H-%M-%S', '%Y-%m-%d']  # Both date formats
-    for server_dir in os.listdir(sync_target_base):
-        server_dir_path = os.path.join(sync_target_base, server_dir)
-        if os.path.isdir(server_dir_path):
-            # Get backup_name_format for this server from the config
-            server = next((s for s in remote_servers if s.get('backup_name', s['host']) == server_dir), None)
-            if server:
-                backup_name_format = server.get('backup_name_format', 'date_time')
-            else:
-                backup_name_format = 'date_time'  # Default
-
-            # Skip cleaning for 'static' backup_name_format
-            if backup_name_format == 'static':
-                continue
-
-            for backup_dir in os.listdir(server_dir_path):
-                backup_dir_path = os.path.join(server_dir_path, backup_dir)
-                if os.path.isdir(backup_dir_path):
-                    dir_name = backup_dir
-                    dir_date = None
-                    for fmt in date_formats:
-                        try:
-                            dir_date = datetime.strptime(dir_name, fmt)
-                            break  # Stop trying formats after a successful parse
-                        except ValueError:
-                            continue  # Try the next format
-                    if dir_date:
-                        if dir_date < cutoff_date:
-                            logging.info(f"Removing old backup: {backup_dir_path}")
-                            shutil.rmtree(backup_dir_path)
-                    else:
-                        logging.warning(f"Skipping directory {backup_dir_path} — unable to parse date")
-        else:
-            logging.warning(f"Skipping non-directory {server_dir_path}")
-
-# Run rsync for each remote server
-for server in remote_servers:
+    # Clean up old backups after each sync
     try:
-        backup_directory, backup_name_format = get_backup_directory(server)
-        run_rsync_with_retries(server, backup_directory, backup_name_format)
+        clean_old_backups(server)
     except Exception as e:
-        logging.error(f"Error occurred during backup of {server['host']}: {e}")
+        logging.error(f"Error occurred during cleanup: {e}")
         if debug_mode:
             logging.info("Debug mode enabled. Container will remain alive for inspection.")
-        else:
-            continue  # Move on to the next server
 
-# Clean up old backups
+# Function to remove backups older than max_days
+def clean_old_backups(server):
+    backup_name = server.get('backup_name', server['host'])
+    backup_name_format = server.get('backup_name_format', 'date_time')
+    server_directory = os.path.join(sync_target_base, backup_name)
+    cutoff_date = datetime.now() - timedelta(days=max_days)
+    date_formats = ['%Y-%m-%d_%H-%M-%S', '%Y-%m-%d']  # Both date formats
+
+    # Skip cleaning for 'static' backup_name_format
+    if backup_name_format == 'static':
+        return
+
+    if os.path.isdir(server_directory):
+        for backup_dir in os.listdir(server_directory):
+            backup_dir_path = os.path.join(server_directory, backup_dir)
+            if os.path.isdir(backup_dir_path):
+                dir_name = backup_dir
+                dir_date = None
+                for fmt in date_formats:
+                    try:
+                        dir_date = datetime.strptime(dir_name, fmt)
+                        break  # Stop trying formats after a successful parse
+                    except ValueError:
+                        continue  # Try the next format
+                if dir_date:
+                    if dir_date < cutoff_date:
+                        logging.info(f"Removing old backup: {backup_dir_path}")
+                        shutil.rmtree(backup_dir_path)
+                else:
+                    logging.warning(f"Skipping directory {backup_dir_path} — unable to parse date")
+            else:
+                logging.warning(f"Skipping non-directory {backup_dir_path}")
+    else:
+        logging.warning(f"Server backup directory does not exist: {server_directory}")
+
+# Scheduler setup
+scheduler = BlockingScheduler()
+
+for server in remote_servers:
+    schedule = server.get('schedule', {})
+    interval_hours = schedule.get('interval_hours')
+    interval_minutes = schedule.get('interval_minutes')
+
+    if interval_hours is not None or interval_minutes is not None:
+        if interval_hours is None:
+            interval_hours = 0
+        if interval_minutes is None:
+            interval_minutes = 0
+
+        trigger = IntervalTrigger(hours=interval_hours, minutes=interval_minutes)
+        scheduler.add_job(run_rsync_with_retries, trigger, args=[server], id=server['host'])
+        logging.info(f"Scheduled backup for {server['host']} every {interval_hours} hours and {interval_minutes} minutes.")
+    else:
+        logging.warning(f"No valid schedule found for {server['host']}. Skipping scheduling.")
+
 try:
-    clean_old_backups()
+    logging.info("Starting scheduler...")
+    scheduler.start()
+except (KeyboardInterrupt, SystemExit):
+    pass
 except Exception as e:
-    logging.error(f"Error occurred during cleanup: {e}")
+    logging.error(f"Scheduler error: {e}")
     if debug_mode:
         logging.info("Debug mode enabled. Container will remain alive for inspection.")
-
-# If debug_mode is enabled, keep the container alive for debugging
-if debug_mode:
-    logging.info("Debug mode enabled. Sleeping to keep the container alive...")
-    while True:
-        time.sleep(3600)  # Sleep for 1 hour in an infinite loop
