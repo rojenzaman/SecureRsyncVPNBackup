@@ -71,6 +71,10 @@ This file contains all the settings for your backups.
 
    Your backups will be stored in the `data/sync` directory, organized per your configuration.
 
+## TODO
+
+[Check out the TODO list](TODO.md)
+
 ## License
 
 This project is licensed under the MIT License.
