@@ -5,52 +5,56 @@
         "host": "myserver1",
         "user": "user1",
         "paths": ["/remote/path1", "/remote/path2"],
+        "exclude_paths": ["/remote/path1/exclude_folder", "/remote/path2/exclude_file"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver1",
         "backup_name": "server1_backup",
-        "backup_name_format": "date_time",  // Possible values: "date_time", "date", "static"
-        "preserve_paths": false,  // Set to true to preserve directory hierarchy
+        "backup_name_format": "date_time",
+        "preserve_paths": false,
         "schedule": {
           "interval_hours": 0,
-          "interval_minutes": 30  // Backup every 30 minutes
+          "interval_minutes": 30
         }
       },
       {
         "host": "myserver2",
         "user": "user2",
         "paths": ["/remote/path3"],
+        "exclude_paths": ["/remote/path3/exclude_folder"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver2",
         "backup_name": "server2_backup",
         "backup_name_format": "date",
         "preserve_paths": false,
         "schedule": {
           "interval_hours": 1,
-          "interval_minutes": 0  // Backup every 1 hour
+          "interval_minutes": 0
         }
       },
       {
         "host": "myserver3",
         "user": "user3",
         "paths": ["/remote/path4", "/remote/path5"],
+        "exclude_paths": ["/remote/path5/exclude_file"],
         "ssh_private_key": "/app/ssh/id_rsa_myserver3",
         "backup_name": "server3_sync",
         "backup_name_format": "static",
         "preserve_paths": true,
         "schedule": {
           "interval_hours": 0,
-          "interval_minutes": 15  // Backup every 15 minutes
+          "interval_minutes": 15
         }
       },
       {
         "host": "X.X.X.X",
         "user": "root",
         "paths": ["/opt/backup", "/root", "/etc/systemd"],
+        "exclude_paths": ["/root/exclude_this"],
         "ssh_private_key": "/app/ssh/key1",
         "backup_name": "backup1",
         "backup_name_format": "static",
         "preserve_paths": true,
         "schedule": {
           "interval_hours": 2,
-          "interval_minutes": 30  // Backup every 2 hours and 30 minutes
+          "interval_minutes": 30
         }
       }
     ]

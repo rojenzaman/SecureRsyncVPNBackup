@@ -78,6 +78,7 @@ def run_rsync_with_retries(server):
     ssh_private_key = server['ssh_private_key']
     paths = server.get('paths', [])
     preserve_paths = server.get('preserve_paths', False)
+    exclude_paths = server.get('exclude_paths', [])
 
     backup_directory, backup_name_format = get_backup_directory(server)
 
@@ -101,6 +102,10 @@ def run_rsync_with_retries(server):
 
         if preserve_paths:
             rsync_command.insert(1, '-R')  # Insert '-R' (relative) option after 'rsync'
+
+        # Add exclude paths to rsync command
+        for exclude_path in exclude_paths:
+            rsync_command.append(f'--exclude={exclude_path}')
 
         rsync_command.extend([
             f'{remote_user}@{remote_host}:{remote_path}',

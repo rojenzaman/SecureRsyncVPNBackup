@@ -23,6 +23,7 @@ This file contains all the settings for your backups.
   - **`host`**: The hostname or IP address of the remote server.
   - **`user`**: The SSH username for the remote server.
   - **`paths`**: An array of files or directories on the remote server to back up.
+  - **`exclude_paths`**: An optional array of files or directories to exclude from the backup.
   - **`ssh_private_key`**: Path to the SSH private key inside the Docker container.
   - **`backup_name`**: Custom name for the backup directory.
   - **`backup_name_format`**: Format for backup directory names.
@@ -38,16 +39,17 @@ This file contains all the settings for your backups.
   "host": "X.X.X.X",
   "user": "root",
   "paths": ["/opt/backup", "/root", "/etc/systemd"],
+  "exclude_paths": ["/root/private_data"],
   "ssh_private_key": "/app/ssh/key1",
   "backup_name": "backup1",
   "backup_name_format": "static",
   "preserve_paths": true,
   "schedule": {
     "interval_hours": 2,
-    "interval_minutes": 30  // Backup every 2 hours and 30 minutes
+    "interval_minutes": 30
   }
 }
-```
+````
 
 ## Usage
 
@@ -68,12 +70,6 @@ This file contains all the settings for your backups.
 3. **Access the Backup Data**
 
    Your backups will be stored in the `data/sync` directory, organized per your configuration.
-
----
-
-**Note**: The backups can now be scheduled with intervals specified in both hours and minutes, providing more precise control over backup timing.
-
----
 
 ## License
 
